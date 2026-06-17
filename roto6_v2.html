@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ロト・シュミレーター（ミニロト / ロト6 / ロト7）</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f3f6;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px 0;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            text-align: center;
+            max-width: 600px;
+            width: 95%;
+        }
+        h1 {
+            font-size: 24px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .mode-selector {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .mode-btn {
+            background-color: #e0e6ed;
+            color: #555;
+            border: none;
+            padding: 10px 18px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mode-btn.active {
+            background-color: #2c3e50;
+            color: white;
+        }
+        .rule-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #2c3e50;
+            padding: 15px;
+            border-radius: 0 8px 8px 0;
+            font-size: 14px;
+            text-align: left;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+        .rule-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        .action-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 4px 6px rgba(231, 76, 60, 0.2);
+        }
+        .action-btn:hover {
+            background-color: #c0392b;
+        }
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #7f8c8d;
+            margin: 20px 0 5px 0;
+            text-align: left;
+        }
+        .ball-container {
+            display: flex;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+            min-height: 50px;
+            background-color: #fafbfc;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px dashed #dcdde1;
+        }
+        .ball {
+            width: 45px;
+            height: 45px;
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 18px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+            animation: pop 0.3s ease-out forwards;
+        }
+        .ball.bonus {
+            border: 2px solid #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        @keyframes pop {
+            0% { transform: scale(0); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 id="appTitle">ミニロト シュミレーター</h1>
+    
+    <div class="mode-selector">
+        <button class="mode-btn active" onclick="changeMode('miniloto')" id="btn-miniloto">ミニロト</button>
+        <button class="mode-btn" onclick="changeMode('loto6')" id="btn-loto6">ロト6</button>
+        <button class="mode-btn" onclick="changeMode('loto7')" id="btn-loto7">ロト7</button>
+    </div>
+
+    <div class="rule-box" id="ruleBox">
+        </div>
+    
+    <button class="action-btn" onclick="drawNumbers()">数字を抽せんする</button>
+
+    <div class="section-title">【本数字】（昇順ソート）</div>
+    <div class="ball-container" id="mainBallContainer"></div>
+
+    <div class="section-title">【ボーナス数字】</div>
+    <div class="ball-container" id="bonusBallContainer"></div>
+</div>
+
+<script>
+// 公式ルールに基づいた設定
+const lotoSettings = {
+    miniloto: {
+        title: "ミニロト シュミレーター",
+        maxNum: 31,
+        mainCount: 5,
+        bonusCount: 1,
+        ruleText: "<div class='rule-title'>【ミニロトのルール】</div>ミニロトは、1～31の数字の中から異なる5個の数字を選びます。1等の当せん金は約1,000万円（理論値）です。抽せんされた5個の「本数字」と1個の「ボーナス数字」が、自分が選んだ数字といくつ一致しているかで1等～4等までの当せんが決まります。<br><strong>（組み合わせの総数：<sub>31</sub>C<sub>5</sub> = 169,911 通り）</strong>"
+    },
+    loto6: {
+        title: "ロト6 シュミレーター",
+        maxNum: 43,
+        mainCount: 6,
+        bonusCount: 1,
+        ruleText: "<div class='rule-title'>【ロト6のルール】</div>ロト6は、1～43の数字の中から異なる6個の数字を選びます。1等なら最高2億円（理論値）、キャリーオーバーがある場合、1等の当せん金は最高6億円です。抽せんされた6個の「本数字」と1個の「ボーナス数字」が、自分が選んだ数字といくつ一致しているかで1等～5等までの当せんが決まります。<br><strong>（組み合わせの総数：<sub>43</sub>C<sub>6</sub> = 6,096,454 通り）</strong>"
+    },
+    loto7: {
+        title: "ロト7 シュミレーター",
+        maxNum: 37,
+        mainCount: 7,
+        bonusCount: 2,
+        ruleText: "<div class='rule-title'>【ロト7のルール】</div>ロト7は、1～37の数字の中から異なる7個の数字を選びます。1等なら最高7億円（理論値）、キャリーオーバーがある場合、1等の當せん金は最高12億円です。抽せんされた7個の「本数字」と2個の「ボーナス数字」が、自分が選んだ数字といくつ一致しているかで1等～6等までの当せんが決まります。<br><strong>（組み合わせの総数：<sub>37</sub>C<sub>7</sub> = 10,295,472 通り）</strong>"
+    }
+};
+
+let currentMode = 'miniloto';
+
+function changeMode(mode) {
+    currentMode = mode;
+    
+    document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`btn-${mode}`).classList.add('active');
+    
+    document.getElementById('appTitle').innerText = lotoSettings[mode].title;
+    document.getElementById('ruleBox').innerHTML = lotoSettings[mode].ruleText;
+    
+    document.getElementById('mainBallContainer').innerHTML = '';
+    document.getElementById('bonusBallContainer').innerHTML = '';
+}
+
+function drawNumbers() {
+    const mainContainer = document.getElementById('mainBallContainer');
+    const bonusContainer = document.getElementById('bonusBallContainer');
+    
+    mainContainer.innerHTML = '';
+    bonusContainer.innerHTML = '';
+
+    const settings = lotoSettings[currentMode];
+    const pool = [];
+    
+    for (let i = 1; i <= settings.maxNum; i++) {
+        pool.push(i);
+    }
+
+    // 1. 本数字の抽出
+    const mainNumbers = [];
+    for (let i = 0; i < settings.mainCount; i++) {
+        const randomIndex = Math.floor(Math.random() * pool.length);
+        const num = pool.splice(randomIndex, 1)[0];
+        mainNumbers.push(num);
+    }
+    // 本数字は組み合わせなので昇順ソート
+    mainNumbers.sort((a, b) => a - b);
+
+    // 2. ボーナス数字の抽出（残りのプールから選ぶため、本数字とは絶対に重複しない）
+    const bonusNumbers = [];
+    for (let i = 0; i < settings.bonusCount; i++) {
+        const randomIndex = Math.floor(Math.random() * pool.length);
+        const num = pool.splice(randomIndex, 1)[0];
+        bonusNumbers.push(num);
+    }
+    // ロト7の場合のみ、ボーナス数字も見やすくソート
+    if (settings.bonusCount > 1) {
+        bonusNumbers.sort((a, b) => a - b);
+    }
+
+    // 3. 画面描画（本数字を表示した後にボーナス数字を表示する演出）
+    let delayIndex = 0;
+
+    // 本数字の描画
+    mainNumbers.forEach((num) => {
+        setTimeout(() => {
+            const ball = document.createElement('div');
+            ball.className = 'ball';
+            ball.innerText = num;
+            
+            let hueOffset = 0;
+            if (currentMode === 'loto6') hueOffset = 120;
+            if (currentMode === 'loto7') hueOffset = 240;
+            
+            ball.style.background = `radial-gradient(circle at 30% 30%, HSL(${(num * 8 + hueOffset) % 360}, 85%, 65%), HSL(${(num * 8 + hueOffset) % 360}, 85%, 45%))`;
+            mainContainer.appendChild(ball);
+        }, delayIndex * 150);
+        delayIndex++;
+    });
+
+    // ボーナス数字の描画
+    bonusNumbers.forEach((num) => {
+        setTimeout(() => {
+            const ball = document.createElement('div');
+            ball.className = 'ball bonus';
+            ball.innerText = num;
+            
+            // ボーナス数字は特別な赤系のグラデーション（目立たせる）
+            ball.style.background = `radial-gradient(circle at 30% 30%, #ff4757, #ff6b81)`;
+            bonusContainer.appendChild(ball);
+        }, delayIndex * 150 + 200); // 本数字が出終わってから少し間を置いて出現
+        delayIndex++;
+    });
+}
+
+// ページ読み込み時に初期ルールの表示
+changeMode('miniloto');
+</script>
+
+</body>
+</html>
